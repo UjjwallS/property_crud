@@ -1,0 +1,16 @@
+# Ignore Python cache and compiled files
+__pycache__/
+*.pyc
+
+# Ignore virtual environment folders
+venv/
+env/
+
+# Ignore Node.js dependencies
+ui/node_modules/
+
+# Ignore Next.js build output
+ui/.next/
+
+# Ignore log files
+*.log
