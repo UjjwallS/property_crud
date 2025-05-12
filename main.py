@@ -1,11 +1,12 @@
 import json
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
 
 app = FastAPI()
 
-# Allow CORS (so frontend on localhost:3000 can access backend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,7 +14,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# List of your JSON files
 json_files = [
     "data/builders_project_info_batch_1.json",
     "data/builders_project_info_batch_2.json",
@@ -21,8 +21,11 @@ json_files = [
     "data/builders_project_info_batch_4.json"
 ]
 
-# Function to load data
+# In-memory storage
+properties = []
+
 def load_data():
+    global properties
     properties = []
     for file in json_files:
         if os.path.exists(file):
@@ -31,8 +34,39 @@ def load_data():
                     properties.extend(json.load(f))
             except Exception as e:
                 print(f"Error reading {file}: {e}")
-    return properties
+
+load_data()
+
+class Project(BaseModel):
+    project_name: str
+    location: str
+    description: str = ""
+    other_info: dict = {}
+
+class Property(BaseModel):
+    builder: str
+    website: str
+    data: List[Project]
 
 @app.get("/properties")
 async def get_properties():
-    return load_data()
+    return properties
+
+@app.post("/properties")
+async def create_property(property: Property):
+    properties.append(property.dict())
+    return {"message": "Property added successfully."}
+
+@app.put("/properties/{property_id}")
+async def update_property(property_id: int, property: Property):
+    if property_id < 0 or property_id >= len(properties):
+        raise HTTPException(status_code=404, detail="Property not found")
+    properties[property_id] = property.dict()
+    return {"message": "Property updated successfully."}
+
+@app.delete("/properties/{property_id}")
+async def delete_property(property_id: int):
+    if property_id < 0 or property_id >= len(properties):
+        raise HTTPException(status_code=404, detail="Property not found")
+    properties.pop(property_id)
+    return {"message": "Property deleted successfully."}
